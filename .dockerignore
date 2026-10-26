@@ -1,6 +1,9 @@
 .git
 .env
-agent
+.pi
+node_modules
+src
+scripts
 backend/bin
 backend/uploads
 quality/reports

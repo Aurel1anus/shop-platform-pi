@@ -1,7 +1,9 @@
 .env
 backend/bin/
 backend/uploads/
-agent/node_modules/
-agent/dist/
+node_modules/
+.pi/runtime/
+.pi/auth.json
+.pi/models.json
 quality/reports/
 *.test

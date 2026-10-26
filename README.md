@@ -1,8 +1,8 @@
-# 小猪小狗：独立业务后端与 Agent 预留结构
+# 小猪小狗：独立业务后端与 pi 插件式接入
 
 这是从原项目提取的新目录，可以整体复制出去独立开发。原项目未修改。这里包含 Go 业务后端、部署配置、商品原始资料和评测输入；不包含 Web 和 Android 客户端。
 
-业务 API 可独立运行。Agent、harness 和 RAG 仅预留空文件，没有安装 pi，也没有实现模型调用。旧聊天、Prompt 发布、向量检索和评测执行接口返回 `501 agent_not_configured`，不伪造成功结果。
+业务 API 可独立运行。项目已接入 pi 1.4.0，支持本地 CLI、SDK 单次对话以及 .pi 插件/技能加载；购物业务工具、记忆、RAG 和 HTTP/SSE 仍保留占位。旧聊天、Prompt 发布、向量检索和评测执行接口仍返回 `501 agent_not_configured`。
 
 ## 目录与职责
 
@@ -25,13 +25,29 @@ backend/
   internal/platform/configcenter/ 内存配置与可选 Nacos
   internal/platform/objectstore/  MinIO
   migrations/                嵌入式建表 SQL 与独立演示数据
-agent/src/                   待实现的 TypeScript 空文件
+.pi/extensions/              pi 插件；状态工具已实现，业务/harness 保留占位
+.pi/skills/                  有效 SKILL.md，业务流程占位
+src/pi-session.mjs           pi SDK 会话初始化
+src/                         HTTP、Go API 客户端、RAG 空占位
+scripts/pi.mjs               单次对话和离线检查
 quality/data/                原始商品资料、图片、评测 JSONL
 deployments/                 独立 Compose
 docs/                        API 清单、Agent 接入边界、迁移说明
 ```
 
 HTTP handler 调用各业务 Service；Service 只依赖本域的窄 Repository 接口；MySQL 实现集中装配。登录密码规则、商品默认值、购物车 SKU 校验和优惠试算已放入 Service。下单、库存预留、订单项和购物车清理保持单一数据库事务，事务内部状态检查与 SQL 一起保留。其余原有业务行为尽量保持，未改造成新的交易系统。
+
+## pi 本地接入
+
+要求 Node.js 22.19+，在本目录执行：
+
+```bash
+npm ci
+npm run check
+npm run pi
+```
+
+也可以执行 `npm run chat -- "调用 shop_status，说明当前接入状态"`。默认使用本机已有的 `deepseek/deepseek-flash` 模型配置，凭证仍由用户 pi 管理，不进入仓库。离线 check 不调用模型、不需要启动后端。插件加载成功不代表购物业务已接通，详情见 [Agent 边界](docs/agent-boundary.md)。
 
 ## 本地启动
 
@@ -115,4 +131,6 @@ COMMERCE_TEST_MYSQL_DSN='root:root@tcp(127.0.0.1:3307)/xzxg_commerce_test?parseT
 - 旧 Agent 的输入风控、商品引用白名单和工具调用预算需要在新 harness 实现；业务 API 的角色和资源归属校验保留。
 - 生产模式需要独立数据库、明确 CORS 来源、非默认 MinIO 凭证，且禁止写入演示数据。不要求模型或 Milvus 密钥。
 
-下一步的 pi 接入见 [Agent 边界](docs/agent-boundary.md)，业务接口见 [API 清单](docs/api.md)。
+pi 接入及后续业务边界见 [Agent 边界](docs/agent-boundary.md)，业务接口见 [API 清单](docs/api.md)。
+
+后续开发顺序、各阶段交付和验收标准见 [开发蓝图](docs/development-blueprint.md)。

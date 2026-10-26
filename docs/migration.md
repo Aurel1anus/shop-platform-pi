@@ -15,8 +15,8 @@
 | backend/src/ingest | internal/knowledge/ingest，保留清洗、URL 获取与来源约束 |
 | backend/src/configcenter | internal/platform/configcenter，仅业务/基础设施默认配置，Nacos 配置组独立 |
 | backend/src/objectstore | internal/platform/objectstore |
-| backend/src/agent | 不复制，agent/src 留空等待新实现 |
-| backend/src/rag、imagevector、retrievalconfig | 不复制，retrieval 预留空文件 |
+| backend/src/agent | 不复制；改为根目录 .pi/extensions、.pi/skills 与本地 pi SDK 接入 |
+| backend/src/rag、imagevector、retrievalconfig | 不复制，src/retrieval 预留空文件 |
 | Agent 会话、run、trace、Prompt 表 | 新数据库不创建，由新 harness 自行设计 |
 | knowledge_chunks | 新数据库不创建，原文存入 knowledge_documents |
 | backend/migrations | 全新业务库建表与演示数据分离，SQL 嵌入二进制 |
@@ -25,3 +25,5 @@
 新目录默认 API 8081、MySQL 3307、MinIO 9100/9101，数据库 xzxg_commerce。要让旧客户端连接，先修改 API 地址；聊天与 AI 管理页面需要等新 Agent 接入。
 
 这次保留了原业务的虚拟支付、优惠核销未接通、bool 错误返回等边界，详情见根 README。仓库层仍保留与原子 SQL/事务紧密相关的状态检查和部分数据装配，未为每个读接口另造一套 DTO 或持久化模型。
+
+pi 接入已调整为插件式：不再使用 agent/src，项目根目录安装固定版本 pi。SDK 和状态工具可运行，业务插件、记忆、RAG、HTTP/SSE 仍占位。参见 agent-boundary.md。

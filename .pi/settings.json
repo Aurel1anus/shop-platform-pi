@@ -1,0 +1,9 @@
+{
+  "defaultProvider": "deepseek",
+  "defaultModel": "deepseek-flash",
+  "defaultThinkingLevel": "off",
+  "defaultTools": ["read", "shop_status"],
+  "enableSkillCommands": true,
+  "cacheWarming": "off",
+  "retry": { "enabled": true, "maxRetries": 1 }
+}
