@@ -1,0 +1,6 @@
+.git
+.env
+agent
+backend/bin
+backend/uploads
+quality/reports

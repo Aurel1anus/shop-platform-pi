@@ -1,0 +1,76 @@
+name: xzxg-commerce
+
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: xzxg_commerce
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysql", "--protocol=TCP", "-h", "127.0.0.1", "-uroot", "-proot", "-D", "xzxg_commerce", "-e", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  minio:
+    image: xzxg-commerce-minio:RELEASE.2025-04-22T22-12-26Z
+    build:
+      context: ./minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    ports:
+      - "127.0.0.1:9100:9000"
+      - "127.0.0.1:9101:9001"
+    volumes:
+      - minio_data:/data
+
+  nacos:
+    profiles: [config]
+    image: nacos/nacos-server:v2.3.2
+    platform: linux/amd64
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "false"
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      JVM_XMN: 128m
+    ports:
+      - "127.0.0.1:18848:8848"
+    volumes:
+      - nacos_data:/home/nacos/data
+
+  api:
+    profiles: [app]
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    environment:
+      API_ADDR: :8081
+      APP_ENV: development
+      MYSQL_DSN: root:root@tcp(mysql:3306)/xzxg_commerce?parseTime=true&loc=Local
+      RUN_MIGRATIONS: "true"
+      SEED_DEMO_DATA: "true"
+      COMMERCE_MINIO_ENDPOINT: minio:9000
+      ECOMMERCE_DATASET_ROOT: /app/quality/data/ecommerce_agent_dataset
+      AVATAR_UPLOAD_ROOT: /tmp/uploads/avatar
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      minio:
+        condition: service_started
+    volumes:
+      - avatar_data:/tmp/uploads
+
+volumes:
+  mysql_data:
+  minio_data:
+  nacos_data:
+  avatar_data:

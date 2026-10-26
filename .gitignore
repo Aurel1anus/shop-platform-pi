@@ -1,0 +1,7 @@
+.env
+backend/bin/
+backend/uploads/
+agent/node_modules/
+agent/dist/
+quality/reports/
+*.test
