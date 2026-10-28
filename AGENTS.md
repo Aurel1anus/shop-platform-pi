@@ -59,6 +59,8 @@
 
 - Go 负责业务数据写入，Agent 通过 HTTP 操作业务。
 - pi 负责模型循环，避免另写一套重复机制。
+- 新增 Agent 侧具体业务接入、检索和数据处理逻辑优先使用 Python；commerce HTTP 客户端放在 src/clients/commerce.py。Go 现有业务后端继续维护，不迁移到 Python；Python 通过 HTTP 调用 Go，不直接读写业务表。
+- pi SDK 会话和扩展注册保留 JavaScript/TypeScript，仅做必要的薄适配，不在其中重复实现 Python 业务逻辑。不为语言切换另建模型循环或常驻 Python 服务；跨语言调用按当前小目标逐步接入。
 - 当前任务不需要的服务、抽象和依赖暂不引入。
 - 不擅自提前实现写工具、多 Agent 或后续阶段功能。
 
@@ -87,6 +89,8 @@
 已有检查入口：
 
 - shop-platform：npm run check，用于现有离线接入检查。
+- shop-platform：python3 -B -m unittest discover -s tests -p 'test_*.py'，用于 Python 离线测试；Python 3.10+，优先使用标准库，新增依赖需说明原因。
+- shop-platform：npm run check:commerce，运行 Python 单元测试及 pi/Python 商品工具离线联调；需要本机临时端口监听权限，不请求模型，不要求 Go 或数据库。
 - shop-platform/backend：go test ./...、go vet ./...、go build ./...，按 Go 变更范围执行。
 
 ## 文档与交接

@@ -7,7 +7,9 @@
   "scripts": {
     "pi": "pi",
     "chat": "node scripts/pi.mjs",
-    "check": "node scripts/pi.mjs --check"
+    "check": "node scripts/pi.mjs --check",
+    "check:commerce": "python3 -B -m unittest discover -s tests -p 'test_*.py' && node --experimental-strip-types --test scripts/commerce-tool.test.mjs",
+    "check:commerce:live": "npm run check:commerce && node --experimental-strip-types --test quality/readonly-smoke.test.mjs"
   },
   "dependencies": {
     "@earendil-works/pi-coding-agent": "1.4.0",

@@ -6,7 +6,7 @@
 
 - Go 电商后端已拆出，包含商品、购物车、订单、虚拟支付、优惠、评价和原始知识资料。
 - pi 1.4.0 已接通 CLI、SDK、项目扩展与技能加载，已有 shop_status 状态工具。
-- 已验证真实模型调用状态工具；购物业务、记忆、RAG、HTTP/SSE 仍为空占位。
+- 已验证真实模型调用状态工具及三个只读商品工具（get_product、list_products、list_product_skus）；“列表→详情→规格”经 Python 客户端调用 Go 的真实模型链路已跑通。固定只读工具/服务场景已通过 npm run check:commerce:live 并记录首次基线（quality/README.md）；批量模型场景评分和开发者独立练习仍待补齐。记忆、RAG、HTTP/SSE 仍为空占位。
 - 原始语料包含 294 个商品 JSON 和 827 条 FAQ；8 份评测集共 477 条，其中检索 300 条、记忆 10 条。
 - 现有 Web 是管理/商家后台，消费端以原 Android 为主；新项目尚无网页聊天界面。
 
@@ -37,17 +37,19 @@ Go API：统一鉴权与对外业务入口
 
 Go 业务数据只有 Go 写入；Agent 通过 HTTP 操作。Go 验证并转发用户凭证，Node 不信任客户端随意提交的 account_id。Node 内部服务无需直接对公网开放。
 
+语言约定更新：新增具体业务接入、检索与数据处理优先使用 Python；pi SDK 会话和扩展注册继续使用 JS/TS，通过必要的薄适配连接 Python，不重复实现业务逻辑。当前只迁移商品详情 HTTP 客户端，不增加常驻 Python 服务；图中的 RAG 等后续业务实现遵循此约定，既有空占位不代表必须使用 TypeScript。
+
 完整对话优先由 pi 原生 SessionManager 保存。harness 负责账号归属、会话并发、消息/run 映射、业务引用与事件，不重写模型循环和另一套完整对话格式。
 
 ## 第一阶段：只读商品工具
 
 目标：在 CLI 中完成“查询商品—查看规格—说明结果”，作为第一个业务闭环。
 
-主要位置：src/clients/commerce.ts、.pi/extensions/commerce/catalog.ts 与 index.ts。
+主要位置：src/clients/commerce.py、.pi/extensions/commerce/catalog.ts 与 index.ts；扩展仅负责工具注册和调用 Python。
 
 交付：
 
-- Go API 客户端，统一超时、错误转换和取消信号传递。
+- Python Go API 客户端与 pi 薄适配，统一超时、错误转换和取消传递。同步 Python 请求采用 socket 等待超时；适配层负责整次调用时限、取消子进程及回收，不能把仅有 socket 超时视为取消链路已完成。
 - list_products、get_product、list_product_skus；明确 list_products 是关键词/品类浏览，尚非语义推荐。
 - 统一工具结果：模型可读的关键字段、UI/日志所需的结构化数据、稳定商品 ID。
 - 需要上下文身份的请求由应用注入凭证，凭证不进入 prompt 或工具参数。

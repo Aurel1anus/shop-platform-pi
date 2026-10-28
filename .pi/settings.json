@@ -2,7 +2,7 @@
   "defaultProvider": "deepseek",
   "defaultModel": "deepseek-flash",
   "defaultThinkingLevel": "off",
-  "defaultTools": ["read", "shop_status"],
+  "defaultTools": ["read", "shop_status", "get_product", "list_products", "list_product_skus"],
   "enableSkillCommands": true,
   "cacheWarming": "off",
   "retry": { "enabled": true, "maxRetries": 1 }

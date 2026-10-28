@@ -19,6 +19,14 @@ export async function createShopSession({ modelRuntime } = {}) {
     cwd: projectRoot,
     agentDir: runtimeDir,
     settingsManager,
+    // 禁止自动发现全局、祖先或额外配置资源，只加载下面明确列出的项目资源。
+    noExtensions: true,
+    noSkills: true,
+    noPromptTemplates: true,
+    additionalExtensionPaths: [
+      join(projectRoot, '.pi'),
+    ],
+    additionalSkillPaths: [join(projectRoot, '.pi/skills')],
     noContextFiles: true,
     noThemes: true,
   });

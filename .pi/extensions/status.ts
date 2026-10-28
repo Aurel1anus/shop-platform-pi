@@ -12,7 +12,8 @@ export default function status(pi: ExtensionAPI) {
         pi: 'configured',
         backendUrl: process.env.COMMERCE_API_BASE_URL ?? 'http://127.0.0.1:8081/api/v1',
         backendConnection: 'not_checked',
-        commerce: 'placeholder',
+        commerce: 'product_read_only',
+        commerceTools: ['get_product', 'list_products', 'list_product_skus'],
         memory: 'placeholder',
         rag: 'placeholder',
       };

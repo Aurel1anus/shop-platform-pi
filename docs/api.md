@@ -77,7 +77,7 @@
 
 ## 动作路径
 
-- 商品：`GET /products/{product_id}`、`GET /products/{product_id}/reviews`。
+- 商品：`GET /products/{product_id}`、`GET /products/{product_id}/reviews`、`GET /products/{product_id}/skus`。
 - 订单：`GET /orders/{order_id}`、`POST /orders/{order_id}:pay`、`:cancel`、`:confirm-receipt`。
 - 订单评价：`POST /orders/{order_id}/items/{order_item_id}:review`。
 - 优惠券领取：`POST /coupons/{coupon_id}:claim`。
@@ -94,6 +94,8 @@
 结算：`POST /orders:checkout`，结算当前用户购物车选中项，按商家拆单，返回 `items` 订单数组。
 
 商品、订单和管理列表支持 `page`、`page_size`。商品列表支持 `keyword`、`category_id`。数据字段沿用原来的 camelCase/snake_case 约定，尚未进行破坏性统一。
+
+商品规格：`GET /products/{product_id}/skus?page=1&page_size=10`，公开只读，分页范围与商品列表一致。返回 items、total、page、page_size；items 包含 skuId、productId、skuName、字符串 price、整数 stockQuantity、stockStatus、字符串键值字典 specs。规格列表不代表商品列表中的单个默认 SKU。当前 handler 不检查商品是否存在，不存在或无规格时均返回 HTTP 200 空列表；存储层部分数据库错误也可能被转换为空结果。不能据此区分这些情况，确认商品存在需另查详情；此次只补充已有接口文档，不改变 Go 行为。
 
 ## 原始知识资料
 

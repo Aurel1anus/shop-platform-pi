@@ -121,9 +121,12 @@ func (s *MySQLStore) ListProducts(ctx context.Context, keyword string, categoryI
 func (s *MySQLStore) ListProductsPage(ctx context.Context, keyword string, categoryID string, page int, pageSize int) ([]domain.ProductCard, int) {
 	page, pageSize = normalizePage(page, pageSize)
 	query, args := productListQuery(keyword, categoryID)
-	countQuery := strings.Replace(query, productCardSelect(), "SELECT COUNT(*)", 1)
+	// 计数与列表复用相同的关联表和筛选条件，只替换查询字段。
+	countQuery := strings.Replace(query, productCardSelect(), "SELECT COUNT(*)"+productCardFrom(), 1)
 	total := 0
-	_ = s.db.QueryRowContext(ctx, countQuery, args...).Scan(&total)
+	if err := s.db.QueryRowContext(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0
+	}
 	query += " ORDER BY p.sort_order, p.product_id LIMIT ? OFFSET ?"
 	args = append(args, pageSize, pageOffset(page, pageSize))
 	return s.queryProductCards(ctx, query, args...), total
@@ -439,6 +442,11 @@ func productCardSelect() string {
 			p.name, p.brand, p.category_id, p.image_url, p.price, p.market_price,
 			p.stock_status, p.status, p.tags_json, p.selling_points_json, p.recommend_reason,
 			p.risk_notes_json
+	` + productCardFrom()
+}
+
+func productCardFrom() string {
+	return `
 		FROM products p
 		JOIN merchants m ON m.merchant_id = p.merchant_id
 		LEFT JOIN categories c ON c.category_id = p.category_id

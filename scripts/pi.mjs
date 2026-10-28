@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
+import { realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ModelRuntime } from '@earendil-works/pi-coding-agent';
-import { createShopSession, runtimeDir } from '../src/pi-session.mjs';
+import { createShopSession, projectRoot, runtimeDir } from '../src/pi-session.mjs';
 
 const checking = process.argv[2] === '--check';
 const prompt = process.argv.slice(2).join(' ').trim();
@@ -21,18 +22,34 @@ try {
   const created = await createShopSession({ modelRuntime });
   session = created.session;
   if (checking) {
-    assert.deepEqual(session.getActiveToolNames().sort(), ['read', 'shop_status']);
+    assert.deepEqual(session.getActiveToolNames().sort(), ['get_product', 'list_product_skus', 'list_products', 'read', 'shop_status']);
     const { skills, diagnostics } = created.resourceLoader.getSkills();
     assert.deepEqual(skills.map((skill) => skill.name).sort(), ['knowledge', 'orders', 'shopping']);
     assert.equal(diagnostics.length, 0, JSON.stringify(diagnostics));
-    assert.equal(created.resourceLoader.getExtensions().extensions.length, 3);
+    const extensions = created.resourceLoader.getExtensions().extensions;
+    assert.deepEqual(
+      (await Promise.all(extensions.map((extension) => realpath(extension.resolvedPath)))).sort(),
+      (await Promise.all(['status.ts', 'commerce/index.ts', 'harness/index.ts'].map(
+        (path) => realpath(join(projectRoot, '.pi/extensions', path)),
+      ))).sort(),
+    );
+    assert.deepEqual(
+      (await Promise.all(skills.map((skill) => realpath(skill.filePath)))).sort(),
+      (await Promise.all(['knowledge', 'orders', 'shopping'].map(
+        (name) => realpath(join(projectRoot, '.pi/skills', name, 'SKILL.md')),
+      ))).sort(),
+    );
+    assert.deepEqual(created.resourceLoader.getAgentsFiles().agentsFiles, []);
+    assert.deepEqual(created.resourceLoader.getPrompts().prompts, []);
     const tool = session.agent.state.tools.find((item) => item.name === 'shop_status');
     const result = await tool.execute('pi-check', {});
     assert.equal(result.details.backendConnection, 'not_checked');
-    assert.equal(result.details.commerce, 'placeholder');
+    assert.equal(result.details.commerce, 'product_read_only');
+    assert.deepEqual(result.details.commerceTools, ['get_product', 'list_products', 'list_product_skus']);
     assert.equal(result.details.memory, 'placeholder');
     assert.equal(result.details.rag, 'placeholder');
     console.log('Pi SDK initialized; 3 extensions and 3 skills loaded; shop_status executed.');
+    console.log('Resource paths verified: project allowlist only; no context files or prompt templates loaded.');
     console.log(`Model: ${session.model.provider}/${session.model.id}; no model API request was made.`);
   } else {
     let failure;
