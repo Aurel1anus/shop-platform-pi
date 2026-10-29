@@ -29,7 +29,7 @@ shop-platform/
     runtime/                         本地运行缓存，Git 忽略
   src/
     pi-session.mjs                   已实现：创建 SDK 会话并加载本项目资源
-    server.ts                        空占位：HTTP/SSE 入口
+    server.ts                        已实现：Node 内部固定 SSE 事件探针，尚未连接 pi
     clients/commerce.py               三个只读商品查询函数与 CLI
     clients/commerce-python.ts        子进程适配、整体超时和取消
     retrieval/                       空占位：ingest.ts、search.ts、types.ts
@@ -85,7 +85,7 @@ PI_PROVIDER=deepseek PI_MODEL=deepseek-flash npm run chat -- "你好"
 | 购物车、订单工具 | 占位 |
 | 记忆、权限策略、业务会话/run/trace | 占位 |
 | 自写 RAG | 占位 |
-| HTTP/SSE 和客户端聊天接入 | 占位，Go 相关接口仍返回 501 |
+| HTTP/SSE | Go 鉴权转发与 Node 固定事件探针已实现；尚未连接 pi、网页与会话 |
 
 `COMMERCE_API_BASE_URL` 默认 `http://127.0.0.1:8081/api/v1`，用于 shop_status 展示及 Python 商品客户端请求。客户端支持商品详情、关键词分页列表与 SKU 分页列表，默认 5 秒 socket 等待超时和错误转换；仅调用公开商品接口，不携带身份凭证。shop_status 报告 product_read_only 和三个商品工具名单，仍不探测后端，不能作为请求成功依据。
 
@@ -107,7 +107,7 @@ Python 3.10+ 客户端可通过 `python3 -B src/clients/commerce.py p_002` 执�
 
 未来工具通过薄适配调用 clients/commerce.py，再经 HTTP 访问 Go 业务 API，不直接写业务表。用户身份由已认证的请求上下文注入，不向模型开放任意 account_id，不共用管理员凭证代办交易。写工具仍需业务幂等，取消生成不会撤销已提交订单。
 
-旧聊天、Prompt、trace 和评测 API 当前保留 501。复用原客户端时需要后续增加 HTTP/SSE 适配，并明确唯一的会话/run 数据拥有者。
+Go 的 `/api/v1/agent/*` 已改为鉴权后转发，使用 `AGENT_INTERNAL_URL` 配置内部地址；未配置返回 503，上游不可用返回 502。目前 Node 仅实现 `GET /api/v1/agent/events` 固定事件探针，其余路径返回 404，会话与聊天尚未接入。Node 默认只监听 `127.0.0.1:8082`（端口可用 `AGENT_PORT` 配置），不读取 pi/模型凭证。Go 覆盖内部身份头并移除登录凭证；该身份头只适用于可信内部部署。详情与验收流程见 README 和 api.md。Prompt、trace 和评测 API 继续保留 501。
 
 ## 知识与评测
 

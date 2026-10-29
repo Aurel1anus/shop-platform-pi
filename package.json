@@ -5,6 +5,8 @@
   "type": "module",
   "engines": { "node": ">=22.19.0" },
   "scripts": {
+    "start:agent": "node --experimental-strip-types src/server.ts",
+    "check:agent": "node --experimental-strip-types --test scripts/agent-server.test.mjs",
     "pi": "pi",
     "chat": "node scripts/pi.mjs",
     "check": "node scripts/pi.mjs --check",

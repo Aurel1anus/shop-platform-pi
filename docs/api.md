@@ -74,6 +74,7 @@
 | `POST /api/v1/orders:checkout` | `handleCheckout` |
 | `GET /api/v1/orders/` | `handleUserOrderAction` |
 | `POST /api/v1/orders/` | `handleUserOrderAction` |
+| `/api/v1/agent/` | `handleAgent`（仅用户角色，经鉴权转发 Node） |
 
 ## 动作路径
 
@@ -101,6 +102,28 @@
 
 `GET /merchant/documents`、`GET /admin/documents` 返回原始 content、metadata、source_url、content_hash。上传与非结构化入库不触发切块，状态为 pending_index。
 
+## Agent 固定 SSE 探针
+
+`GET /api/v1/agent/events` 需要用户 Bearer token。Go 通过 `AGENT_INTERNAL_URL` 转发到 Node 的同一路径并保留查询参数；当前 Node 只支持上述探针路径（查询参数不影响固定输出），其他路径为 404，不支持的方法为 405。此接口不请求模型、不保存历史、不执行商品工具。
+
+正常响应为 HTTP 200、`Content-Type: text/event-stream; charset=utf-8`、`Cache-Control: no-cache`。事件以空行分隔，`data` 是 JSON：
+
+```text
+event: status
+data: {"status":"connected","demo":true}
+
+event: text_delta
+data: {"text":"SSE 转发链路已连接（固定测试文本）"}
+
+event: done
+data: {"demo":true}
+
+```
+
+第一条立即发送，后两条各间隔约 300 毫秒。未登录/无效 token 返回 401，非用户角色返回 403，未配置 Node 地址返回 `503 agent_not_configured`；连接失败或等待上游响应头超过 5 秒返回 `502 agent_unavailable`。流已开始后意外断开不能再更换 HTTP 状态；尚未实现断线续传。
+
+Go 从认证上下文注入 `X-Agent-Account-ID` 并覆盖客户端同名头，移除 Authorization/Cookie。Node 只监听本机并信任内部请求，此头不能作为公开接口鉴权方式。浏览器调用应携带 Authorization；原生 EventSource 无法直接配置该请求头，后续网页使用流式 fetch 等方式。
+
 ## 暂未接入的接口
 
-`/agent/*`、`/eval/*`、`/admin/agent/*`、`/admin/prompts*`、`/admin/evals*`、`/admin/vector/*` 与图片语义搜索返回 501。Agent 服务接入方案见 agent-boundary.md。
+`/agent/*` 已转发，但仅实现上述固定事件探针，会话和消息接口尚未实现。`/eval/*`、`/admin/agent/*`、`/admin/prompts*`、`/admin/evals*`、`/admin/vector/*` 与图片语义搜索仍返回 501。Agent 服务接入方案见 agent-boundary.md。

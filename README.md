@@ -2,7 +2,7 @@
 
 这是从原项目提取的新目录，可以整体复制出去独立开发。原项目未修改。这里包含 Go 业务后端、部署配置、商品原始资料和评测输入；不包含 Web 和 Android 客户端。
 
-业务 API 可独立运行。项目已接入 pi 1.4.0，支持本地 CLI、SDK 单次对话以及 .pi 插件/技能加载；list_products、get_product 和 list_product_skus 已通过 Python 接通关键词分页查询、商品详情和规格查询，其余业务工具、记忆、RAG 和 HTTP/SSE 仍保留占位。旧聊天、Prompt 发布、向量检索和评测执行接口仍返回 `501 agent_not_configured`。
+业务 API 可独立运行。项目已接入 pi 1.4.0，支持本地 CLI、SDK 单次对话以及 .pi 插件/技能加载；list_products、get_product 和 list_product_skus 已通过 Python 接通关键词分页查询、商品详情和规格查询。Go 已支持鉴权后转发 Node，提供固定 SSE 事件探针；网页聊天、会话、记忆、RAG 仍未实现。Prompt 发布、向量检索和评测执行接口仍返回 `501 agent_not_configured`。
 
 ## 目录与职责
 
@@ -30,7 +30,8 @@ backend/
 src/pi-session.mjs           pi SDK 会话初始化
 src/clients/commerce.py      Python 只读商品详情、列表与规格 HTTP 客户端
 src/clients/commerce-python.ts  详情、列表与规格的 Python 子进程薄适配
-src/                         HTTP、RAG 仍为空占位
+src/server.ts                Node 内部 HTTP/SSE 固定事件探针
+src/retrieval/               RAG 空占位
 scripts/pi.mjs               单次对话和离线检查
 quality/data/                原始商品资料、图片、评测 JSONL
 deployments/                 独立 Compose
@@ -136,6 +137,28 @@ go run ./cmd/import-products
 ```
 
 导入器保存商品、SKU 以及商品说明、FAQ、评价原文。知识资料状态为 `pending_index`，`chunk_count` 为 0，metadata 包含所属 `product_id`；不计算 embedding、不建立索引。商品 JSON 内的评价被作为知识原文导入，不会冒充已购买订单生成交易评价。
+
+## Agent SSE 手动验收
+
+本小目标只验证登录、Go 转发和逐条事件输出，不调用模型，也不创建聊天会话。需要 Node.js 22.19+、Go 1.24+、已启动的本项目 MySQL。无新增依赖。
+
+1. 在项目根目录执行 `npm run check:agent`、`npm run check`；在 `backend` 执行 `go test ./...`、`go vet ./...`、`go build ./...`，预期全部通过。新 Node/Go 接口测试需要本机临时端口监听权限；Go 数据库集成测试未设置 `COMMERCE_TEST_MYSQL_DSN` 时会跳过。
+2. 终端 A 在根目录执行 `npm run start:agent`，预期监听 `127.0.0.1:8082`。可用 `AGENT_PORT` 改端口。Node 只绑定本机，不对公网开放。
+3. 终端 B 在 `backend` 执行 `AGENT_INTERNAL_URL=http://127.0.0.1:8082 go run ./cmd/api`，预期监听 8081。已有 Go 进程需先在原终端 Ctrl+C 停止；环境变量修改需要重启才生效。`AGENT_INTERNAL_URL` 必须是仅含主机与可选端口的 HTTP 地址；未设置时 Agent 路由返回 503，不影响业务接口。此流程使用宿主机进程，尚未配置 Docker 内的 Node 服务。
+4. 终端 C 执行 `curl -i http://127.0.0.1:8081/api/v1/agent/events`，预期 401。错误或过期 token 也应为 401；商家/管理员 token 为 403。
+5. 使用已有 `POST /api/v1/auth/login` 接口登录用户账号（请求格式见 `docs/api.md`），取得响应的 `token`。随后在 Bash 中交互粘贴 token，避免写进命令历史：
+
+   ```bash
+   read -rsp "粘贴用户 token：" AGENT_TEST_TOKEN
+   printf '\n'
+   printf 'header = "Authorization: Bearer %s"\n' "$AGENT_TEST_TOKEN" |
+     curl --config - -N -i http://127.0.0.1:8081/api/v1/agent/events
+   ```
+
+   预期 HTTP 200、`Content-Type: text/event-stream`，立即收到 `status`，约 300 毫秒后收到 `text_delta`，再约 300 毫秒后收到 `done` 并结束。文本明确标注为固定测试内容。`-N` 关闭 curl 输出缓冲，便于观察事件逐条到达。网页以后需使用可携带 Authorization 的流式请求方式。
+6. 在终端 A Ctrl+C 停止 Node，再执行上面的 `printf ... | curl ...` 请求，预期 HTTP 502、`agent_unavailable`。重新启动 Node 后可再次成功，不用重启 Go。测完执行 `unset AGENT_TEST_TOKEN`。
+
+Go 使用已登录账号覆盖 `X-Agent-Account-ID`，不会转发用户的 Authorization 或 Cookie。该内部头不是登录凭证；Node 仅能放在可信本机/内部网络中，后续扩展部署时需单独设计服务身份验证。客户端断开连接会取消 Go 上游请求，Node 清理发送定时器；这不等于已实现模型或工具取消。上游在发送响应头之前失败返回 502，已开始的 SSE 意外断流则由客户端视为中断，不能承诺再改成 HTTP 502。
 
 ## Docker 运行 API
 

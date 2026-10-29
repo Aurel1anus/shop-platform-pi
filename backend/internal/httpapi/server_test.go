@@ -19,6 +19,9 @@ func (*identityRepo) GetAccountByToken(_ context.Context, token string) (domain.
 	if token == "user-token" {
 		return domain.Account{AccountID: "user-a", Role: domain.AccountRoleUser}, true
 	}
+	if token == "merchant-token" {
+		return domain.Account{AccountID: "merchant-a", Role: domain.AccountRoleMerchant}, true
+	}
 	return domain.Account{}, false
 }
 
@@ -32,7 +35,7 @@ func TestBusinessRoutesDoNotRequireAgentAndKeepRoleChecks(t *testing.T) {
 		{http.MethodGet, "/api/v1/health", "", 200},
 		{http.MethodGet, "/api/v1/cart", "", 401},
 		{http.MethodGet, "/api/v1/admin/accounts", "user-token", 403},
-		{http.MethodPost, "/api/v1/agent/sessions", "user-token", 501},
+		{http.MethodPost, "/api/v1/agent/sessions", "user-token", 503},
 		{http.MethodPost, "/api/v1/eval/intent", "", 501},
 	} {
 		t.Run(tc.path, func(t *testing.T) {

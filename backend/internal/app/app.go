@@ -32,6 +32,10 @@ type Application struct {
 func (a *Application) Close() error { return a.store.Close() }
 
 func New(ctx context.Context, logger *slog.Logger) (*Application, error) {
+	agent, err := httpapi.NewAgentProxy(os.Getenv("AGENT_INTERNAL_URL"))
+	if err != nil {
+		return nil, err
+	}
 	production := strings.EqualFold(env("APP_ENV", "development"), "production")
 	dsn := env("MYSQL_DSN", "root:root@tcp(127.0.0.1:3307)/xzxg_commerce?parseTime=true&loc=Local")
 	if production && (strings.HasPrefix(dsn, "root:root@") || os.Getenv("MYSQL_DSN") == "") {
@@ -85,7 +89,8 @@ func New(ctx context.Context, logger *slog.Logger) (*Application, error) {
 		}
 	}
 	services := httpapi.Services{
-		Auth: auth.New(repo), Catalog: catalog.New(repo), Cart: cart.New(repo),
+		Agent: agent,
+		Auth:  auth.New(repo), Catalog: catalog.New(repo), Cart: cart.New(repo),
 		Order: order.New(repo), Promotion: promotion.New(repo), Review: review.New(repo),
 		Knowledge: knowledge.New(repo), Files: files.New(repo),
 	}

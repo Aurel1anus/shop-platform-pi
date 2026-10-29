@@ -16,6 +16,7 @@ import (
 )
 
 type Server struct {
+	agent     http.Handler
 	auth      *auth.Service
 	catalog   *catalog.Service
 	cart      *cart.Service
@@ -29,6 +30,7 @@ type Server struct {
 }
 
 type Services struct {
+	Agent     http.Handler
 	Auth      *auth.Service
 	Catalog   *catalog.Service
 	Cart      *cart.Service
@@ -40,7 +42,7 @@ type Services struct {
 }
 
 func NewServer(services Services, configs configcenter.Center, logger *slog.Logger) *Server {
-	return &Server{auth: services.Auth, catalog: services.Catalog, cart: services.Cart, order: services.Order, promotion: services.Promotion, review: services.Review, knowledge: services.Knowledge, files: services.Files, configs: configs, logger: logger}
+	return &Server{agent: services.Agent, auth: services.Auth, catalog: services.Catalog, cart: services.Cart, order: services.Order, promotion: services.Promotion, review: services.Review, knowledge: services.Knowledge, files: services.Files, configs: configs, logger: logger}
 }
 
 // Routes 集中声明所有 API 路由，并在最后套上跨域、鉴权、限流、日志和请求体限制中间件。
@@ -107,7 +109,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("POST /api/v1/orders:checkout", s.handleCheckout)
 	mux.HandleFunc("GET /api/v1/orders/", s.handleUserOrderAction)
 	mux.HandleFunc("POST /api/v1/orders/", s.handleUserOrderAction)
-	mux.HandleFunc("/api/v1/agent/", s.handleAgentUnavailable)
+	mux.HandleFunc("/api/v1/agent/", s.handleAgent)
 	mux.HandleFunc("/api/v1/eval/", s.handleAgentUnavailable)
 	mux.HandleFunc("/api/v1/admin/prompts", s.handleAgentUnavailable)
 	mux.HandleFunc("/api/v1/admin/prompts/", s.handleAgentUnavailable)

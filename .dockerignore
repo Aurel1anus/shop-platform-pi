@@ -7,3 +7,4 @@ scripts
 backend/bin
 backend/uploads
 quality/reports
+test_learn.py
